@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Divas Trivia</title>
+    <style>
+        :root {
+            --bg-center: #FFFFFF;
+            --bg-outer: #FDF5E6;
+            --text-dark: #2B1D0E;
+            --gold-primary: #D4AF37;
+            --gold-dark: #997A00;
+            --correct-green: #2E7D32;
+            --wrong-red: #C62828;
+            --timer-warning: #D32F2F;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: "Georgia", "Times New Roman", serif;
+            color: var(--text-dark);
+            background: radial-gradient(circle at center, var(--bg-center) 0%, var(--bg-outer) 100%);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #stage-frame {
+            position: relative;
+            width: calc(100% - 40px);
+            height: calc(100% - 40px);
+            border: 6px solid var(--gold-primary);
+            outline: 2px solid var(--text-dark);
+            outline-offset: -12px;
+            box-shadow: inset 0 0 50px rgba(212, 175, 55, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gold-primary);
+        }
+        .corner.tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+        .corner.tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+        .corner.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+        .corner.br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: clamp(10px, 4vh, 0px) clamp(20px, 4vw, 60px) clamp(4px, 0.5vh, 8px);
+            height: clamp(90px, 12vh, 130px);
+            padding-top: 10px;
+            position: relative;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .team-score-container {
+            text-align: center;
+            width: clamp(120px, 15vw, 220px);
+        }
+
+        .team-name {
+            font-size: clamp(0.7rem, 1.2vw, 1.2rem);
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .team-score {
+            font-size: clamp(1.8rem, 3.5vw, 3.5rem);
+            font-weight: bold;
+            color: var(--gold-dark);
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+
+        .score-pulse {
+            transform: scale(1.4);
+            color: var(--correct-green);
+        }
+
+        .center-axis {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            top: 0px;
+        }
+
+        .timer-circle {
+            width: clamp(55px, 6vw, 85px);
+            height: clamp(55px, 6vw, 85px);
+            border-radius: 50%;
+            border: 4px solid var(--gold-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(1.4rem, 2.2vw, 2.6rem);
+            font-weight: bold;
+            background: #fff;
+            position: relative;
+            top: -3px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .timer-warning {
+            border-color: var(--timer-warning);
+            color: var(--timer-warning);
+            animation: pulse 1s infinite;
+        }
+
+        main {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-in-out;
+            padding: 40px;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        h1.title {
+            font-size: clamp(2.5rem, 5.5vw, 6rem);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            color: var(--text-dark);
+            text-shadow: 2px 2px 4px rgba(212, 175, 55, 0.4);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: clamp(1.2rem, 2.2vw, 2.2rem);
+            font-style: italic;
+            color: var(--gold-dark);
+        }
+
+        .question-text {
+            font-size: clamp(1.3rem, 2.4vw, 2.8rem);
+            font-weight: bold;
+            text-align: center;
+            max-width: 85%;
+            margin-bottom: clamp(20px, 4vh, 50px);
+            line-height: 1.3;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: clamp(15px, 2vw, 30px);
+            width: 88%;
+            max-width: 1400px;
+        }
+
+        .option-btn {
+            background: #fff;
+            border: 3px solid var(--gold-primary);
+            padding: clamp(14px, 2vh, 28px) clamp(14px, 1.5vw, 25px);
+            font-size: clamp(1rem, 1.6vw, 1.9rem);
+            font-family: inherit;
+            color: var(--text-dark);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .option-label {
+            font-weight: bold;
+            color: var(--gold-dark);
+            margin-right: 15px;
+            font-size: clamp(1.1rem, 1.8vw, 2.1rem);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: var(--bg-outer);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+        .option-btn.selected {
+            background: #FFF59D !important;
+            border-color: #FBC02D;
+        }
+        .option-btn.correct {
+            background: #E8F5E9 !important;
+            border-color: var(--correct-green);
+            color: var(--correct-green);
+            box-shadow: 0 0 20px rgba(46, 125, 50, 0.4);
+        }
+        .option-btn.wrong {
+            background: #FFEBEE !important;
+            border-color: var(--wrong-red);
+            color: var(--wrong-red);
+            opacity: 0.7;
+        }
+
+        .feedback-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(3rem, 6vw, 7rem);
+            font-weight: bold;
+            text-transform: uppercase;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 20;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+            transition: opacity 0.3s;
+        }
+
+        .feedback-text.show {
+            opacity: 1;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .text-correct { color: var(--correct-green); }
+        .text-wrong { color: var(--wrong-red); }
+
+        /* ── SHARED BUTTON BASE ── */
+        .next-btn {
+            background: linear-gradient(145deg, var(--gold-primary), var(--gold-dark));
+            color: var(--text-dark);
+            border: 2px solid var(--gold-dark);
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: bold;
+            font-family: inherit;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+            transition: all 0.25s ease;
+        }
+        .next-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(145deg, #E6C14A, var(--gold-primary));
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        .next-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        /* ── TOP BAR ── */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: clamp(18px, 3vh, 32px) clamp(20px, 3vw, 40px) clamp(4px, 0.5vh, 8px);
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+            position: relative;
+        }
+
+        .game-title {
+            font-size: clamp(0.8rem, 1.3vw, 1.4rem);
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            flex: 1;
+        }
+
+        .turn-indicator {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(0.8rem, 1.3vw, 1.4rem);
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+       .top-bar {
+            padding: clamp(18px, 3vh, 32px) clamp(20px, 3vw, 40px) clamp(4px, 0.5vh, 8px);
+        }
+
+        .game-title,
+       .turn-indicator {
+            font-size: clamp(0.85rem, 1.4vw, 1.5rem);
+        }
+        #btn-start {
+            margin-top: clamp(30px, 4vh, 50px);
+            padding: clamp(12px, 1.5vh, 18px) clamp(35px, 4vw, 60px);
+            font-size: clamp(1rem, 1.4vw, 1.4rem);
+        }
+
+        /* ── POPUP NEXT QUESTION MODAL ── */
+        #next-popup-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(43, 29, 14, 0.60);
+            backdrop-filter: blur(4px);
+            z-index: 9000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #next-popup-overlay.visible {
+            display: flex;
+            animation: fadeInOverlay 0.3s ease forwards;
+        }
+
+        @keyframes fadeInOverlay {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        #next-popup-box {
+            background: #fff;
+            border: 4px solid var(--gold-primary);
+            outline: 2px solid var(--gold-dark);
+            outline-offset: 4px;
+            border-radius: 16px;
+            padding: clamp(30px, 4vh, 55px) clamp(40px, 5vw, 80px);
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            animation: popInModal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 90vw;
+        }
+
+        @keyframes popInModal {
+            0%   { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1);   opacity: 1; }
+        }
+
+        #next-popup-box .popup-label {
+            font-size: clamp(0.7rem, 1vw, 1rem);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold-dark);
+            margin-bottom: clamp(10px, 1.5vh, 20px);
+        }
+
+        #popup-correct-answer {
+            font-size: clamp(1rem, 1.5vw, 1.5rem);
+            color: var(--correct-green);
+            font-weight: bold;
+            margin-bottom: clamp(16px, 2.5vh, 30px);
+            padding: clamp(8px, 1vh, 14px) clamp(16px, 2vw, 24px);
+            background: #E8F5E9;
+            border: 2px solid var(--correct-green);
+            border-radius: 8px;
+            letter-spacing: 0.5px;
+            width: clamp(280px, 35vw, 560px);
+            box-sizing: border-box;
+        }
+
+        #popup-correct-answer span {
+            color: var(--text-dark);
+            font-weight: normal;
+        }
+
+        #btn-next-popup {
+            padding: clamp(12px, 1.5vh, 18px) clamp(35px, 4vw, 60px);
+            font-size: clamp(1rem, 1.3vw, 1.3rem);
+        }
+
+        #popup-explanation {
+            font-size: clamp(0.85rem, 1.2vw, 1.2rem);
+            color: var(--text-dark);
+            font-style: italic;
+            margin-bottom: clamp(16px, 2.5vh, 30px);
+            padding: clamp(8px, 1vh, 14px) clamp(16px, 2vw, 24px);
+            background: #FDF5E6;
+            border: 2px solid var(--gold-primary);
+            border-radius: 8px;
+            width: clamp(280px, 35vw, 560px);
+            box-sizing: border-box;
+            line-height: 1.5;
+        }
+
+        /* ── RESTART BUTTON ── */
+        #btn-restart {
+            margin-top: clamp(20px, 3vh, 36px);
+            padding: clamp(12px, 1.5vh, 18px) clamp(35px, 4vw, 60px);
+            font-size: clamp(1rem, 1.4vw, 1.4rem);
+        }
+
+        /* ── CREDITS SECTION ── */
+        .credits-block {
+            margin-top: clamp(18px, 2.5vh, 32px);
+            text-align: center;
+            animation: fadeCredits 1.2s ease 0.4s both;
+        }
+
+        @keyframes fadeCredits {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .credits-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: clamp(8px, 1.2vh, 16px);
+        }
+
+        .credits-divider-line {
+            width: clamp(40px, 6vw, 80px);
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--gold-primary));
+        }
+
+        .credits-divider-line.right {
+            background: linear-gradient(to left, transparent, var(--gold-primary));
+        }
+
+        .credits-divider-diamond {
+            color: var(--gold-primary);
+            font-size: 0.8rem;
+            letter-spacing: 4px;
+        }
+
+        .credits-label {
+            font-size: clamp(0.55rem, 0.85vw, 0.85rem);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--gold-dark);
+            margin-bottom: clamp(8px, 1.2vh, 14px);
+            font-style: normal;
+        }
+
+        .credits-names {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: clamp(6px, 1vw, 14px) clamp(16px, 2.5vw, 36px);
+        }
+
+        .credit-name {
+            font-size: clamp(0.75rem, 1.1vw, 1.1rem);
+            font-weight: bold;
+            color: var(--text-dark);
+            letter-spacing: 1.5px;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .credit-name::after {
+            content: '';
+            display: block;
+            height: 1.5px;
+            background: var(--gold-primary);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.35s ease;
+        }
+
+        .credit-name:hover::after {
+            transform: scaleX(1);
+        }
+
+        /* ── ANIMATIONS ── */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        #timeout-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(3rem, 6vw, 7rem);
+            font-weight: bold;
+            color: var(--gold-dark);
+            background: rgba(0,0,0,0.0);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        #timeout-message.show {
+            animation: timeoutPop 2s ease forwards;
+        }
+
+        @keyframes timeoutPop {
+            0%   { opacity: 0; transform: scale(0.6); }
+            20%  { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(1); }
+        }
+
+        #wrong-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9998;
+        }
+
+        #wrong-overlay.show {
+            animation: flashEffect 1.5s ease-in-out;
+        }
+
+        #wrong-overlay.wrong   { background: rgba(198, 40, 40, 0.85); }
+        #wrong-overlay.correct { background: rgba(46, 125, 50, 0.75); }
+        #wrong-overlay.timeout { background: rgba(255, 193, 7, 0.75); }
+
+        @keyframes flashEffect {
+            0%   { opacity: 0; }
+            25%  { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        .shake { animation: shakeScreen 0.8s ease-in-out; }
+
+        @keyframes shakeScreen {
+            0%   { transform: translate(0, 0); }
+            15%  { transform: translate(-6px, 4px); }
+            30%  { transform: translate(6px, -4px); }
+            45%  { transform: translate(-5px, 3px); }
+            60%  { transform: translate(5px, -3px); }
+            75%  { transform: translate(-3px, 2px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        @keyframes correctPop {
+            0%   { transform: scale(1); }
+            25%  { transform: scale(1.12); }
+            50%  { transform: scale(0.97); }
+            75%  { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .correct-pop {
+            animation: correctPop 0.5s ease-out;
+            box-shadow: 0 0 20px rgba(46, 125, 50, 0.5);
+        }
+
+        .team-score-container {
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            transform: scale(0.95);
+        }
+
+        .team-score-container.active {
+            opacity: 1;
+            transform: scale(1.05);
+            border-bottom: 3px solid var(--gold-primary);
+        }
+
+        .team-score-container.active .team-score {
+            color: var(--gold-primary);
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+        }
+
+        /* ── MOBILE FIX: prevent title/turn-indicator overlap ── */
+        @media (max-width: 540px) {
+            .top-bar {
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                padding-top: 8px;
+                padding-bottom: 8px;
+            }
+            .turn-indicator {
+                position: static;
+                transform: none;
+                font-size: 0.75rem;
+            }
+            .game-title {
+                flex: none;
+                font-size: 0.75rem;
+            }
+            .credits-names {
+                gap: 6px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="stage-frame">
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+
+    <div class="top-bar">
+        <div class="game-title">Golden Divas Trivia</div>
+        <div class="turn-indicator" id="turn-indicator"></div>
+    </div>
+
+    <header>
+        <div class="team-score-container" id="team-a-container">
+            <div class="team-name">Team A</div>
+            <div class="team-score" id="score-A">0</div>
+        </div>
+        <div class="center-axis">
+            <div class="timer-circle" id="timer">--</div>
+        </div>
+        <div class="team-score-container" id="team-b-container">
+            <div class="team-name">Team B</div>
+            <div class="team-score" id="score-B">0</div>
+        </div>
+    </header>
+
+    <main>
+        <!-- INTRO SLIDE -->
+        <div class="slide intro active" id="slide-intro">
+            <h1 class="title">Golden Divas</h1>
+            <div class="subtitle">Lebanese Musical Heritage</div>
+            <button class="next-btn" id="btn-start" onclick="loadNextQuestion()">Start Game</button>
+        </div>
+
+        <!-- QUESTION SLIDE -->
+        <div class="slide question" id="slide-question">
+            <div class="question-text" id="q-text">Question goes here?</div>
+            <div class="options-grid" id="q-options"></div>
+            <div class="feedback-text" id="feedback-message"></div>
+            <div id="timeout-message"></div>
+        </div>
+
+        <div id="wrong-overlay"></div>
+
+        <div class="slide scoreboard" id="slide-scoreboard">
+            <h1 class="title">Current Standings</h1>
+            <div class="subtitle" id="scoreboard-status">Ready for the next round</div>
+        </div>
+
+        <!-- RESULTS SLIDE -->
+        <div class="slide results" id="slide-results">
+            <h1 class="title" id="final-winner">Team X Wins!</h1>
+            <div class="subtitle">Thank you for playing</div>
+            <button class="next-btn" id="btn-restart" onclick="location.reload()">Play Again</button>
+
+            <!-- CREDITS -->
+            <div class="credits-block">
+                <div class="credits-divider">
+                    <div class="credits-divider-line"></div>
+                    <div class="credits-divider-diamond">✦ ✦ ✦</div>
+                    <div class="credits-divider-line right"></div>
+                </div>
+                <div class="credits-label">Created by</div>
+                <div class="credits-names">
+                    <span class="credit-name">Dany Bou Monsef</span>
+                    <span class="credit-name">Carlo Efrem</span>
+                    <span class="credit-name">Rim Sleiman</span>
+                    <span class="credit-name">Christie Elias</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="next-popup-overlay">
+        <div id="next-popup-box">
+            <div class="popup-label">Round Complete</div>
+            <div id="popup-correct-answer"></div>
+            <div id="popup-explanation"></div>
+            <button class="next-btn" id="btn-next-popup" onclick="loadNextQuestion()">Next Question</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const questions = [ 
+    {
+        question: "What was Fairuz's title?",
+        options: ["سفيرتنا إلى النجوم", "كوكب الشرق", "صوت الأرض", "ملكة البوب العربي"],
+        correct: 0,
+        explanation: "Fairuz was given the title 'سفيرتنا إلى النجوم' by Lebanese President Charles Helou, recognizing her as Lebanon's greatest cultural ambassador."
+    },
+    {
+        question: "How many songs does Fairuz have?",
+        options: ["800", "900", "1000", "1500"],
+        correct: 3,
+        explanation: "Fairuz has recorded over 1,500 songs throughout her legendary career over seven decades."
+    }, 
+   
+    {
+        question: 'In what song did this lyric appear "قمنا ع بكرة.. رجعنا جعنا.. لازم ناكل عن جديد.."?',
+        options: ["Ana Moush Kafer", "Esmaa Ya Reda", "Bala Wala Shi", "Bisaraha"],
+        correct: 1,
+        explanation: "This lyric appears in 'Esmaa Ya Reda', a playful Ziad Al Rahbanni song that humorously critiques Lebanon's political and economic situation."
+    },
+    {
+        question: "Wadih El Safi is widely celebrated for popularizing which traditional Lebanese folk music style on a global scale?",
+        options: ["Mijana and Ataba", "Rai Music", "Mahraganat", "Khaliji"],
+        correct: 0,
+        explanation: "Wadih El Safi is widely celebrated for popularizing Mijana and Ataba as well as Mouwel, on a global scale."
+    }, 
+    {
+        question: "What was the primary instrument played by Ziad Rahbani?",
+        options: ["Oud", "Qanun", "Piano", "Nay"],
+        correct: 2,
+        explanation: "Ziad Rahbani main instrument was the piano which he started playing at a very young age"
+    }, 
+    {
+        question: "What was Sabah's nickname?",
+        options: ["Kawkab El Sharq", "Al Shahroura", "Jarat Al Qamar", "Asmahan"],
+        correct: 1,
+        explanation: "Sabah is widely known by the nickname 'Al Shahroura' or 'Sabbouha'"
+    },
+    {
+        question: "When was Fairuz's first major stage performance with the Rahbani Brothers?",
+        options: ["1955", "1959", "1957", "1961"],
+        correct: 2,
+        explanation: "Her first major stage breakthrough with the Rahbani Brothers came in 1957 at the Baalbeck International Festival."
+    },
+    {
+        question: "At what age did Ziad Rahbani write and stage his first major theatrical play?",
+        options: ["15", "20", "18", "17"],
+        correct: 3,
+        explanation: "Ziad Rahbani wrote and staged his first major theatrical work, 'Sahriyyeh', in 1973, when he was about 17 years old."
+    },
+
+    {
+        question: "How many times did Sabah get married?",
+        options: ["3", "5", "7", "9"],
+        correct: 2,
+        explanation: "Sabah married 7 men throughout her life, the last marriage at 85 years old."
+    },
+    {
+        question: "In which year did Sabah pass away?",
+        options: ["2006", "2014", "2012", "2020"],
+        correct: 1,
+        explanation: "Sabah passed away in 2014 at the age of 87, after a long and influential career in Arabic music and cinema."
+    },
+  
+    {
+        question: "Which of these songs was composed and performed by Zaki Nassif?",
+        options: ["فراشي وزهرة", "يا رايح", "بنت الشلبية", "زهرة المدائن"],
+        correct: 0,
+        explanation: "فراشي وزهرة is a famous song composed and performed by Zaki Nassif, known for its poetic lyrics and beautiful melody."
+    },
+
+    {
+        question: "Who sang the song 'صيدلي يا صيدلي'?",
+        options: [ "Melhem Barakat", "George Wassouf","Azar Habib", "Zaki nassif"],
+        correct: 2,
+        explanation: "Azar Habib is the artist who performed 'صيدلي يا صيدلي', a comedic Lebanese folk-style song known for its humorous lyrics"
+    },
+    {
+        question: "What's Fairuz's vocal range?",
+        options: ["Mezzo-soprano", "Alto", "Soprano", "Contralto"],
+        correct: 1,
+        explanation: "Fairuz possesses a rich Alto vocal range, characterized by its warmth and depth."
+    },
+    {
+        question: "What's Fairuz's real name?",
+        options: ["Nouhad Wadih Haddad", "Noelle Al Konsol", "Jeanette Georges Feghali", "Karol Sakr"],
+        correct: 0,
+        explanation: "Fairuz's real name is Nouhad Wadih Haddad. The stage name 'Fairuz' was given to her by musician Halim El Roumi."
+    },
+    {
+        question: "Which song does NOT belong to Sabah?",
+        options: ["زي العسل", "عندك بحرية", "جيب المجوز", "تعلّى وتتعمر يا دار"],
+        correct: 1,
+        explanation: "Sabah did not perform 'عندك بحرية', which is associated with Wadih El Safi."
+    },
+    {
+        question: "What instrument did Wadih El Safi play while singing?",
+        options: ["الكمان", "القانون", "الناي", "العود"],
+        correct: 3,
+        explanation: "Wadih El Safi played the 'العود' (Oud), and he rarely performed without it, making it a signature part of his artistic identity."
+    },
+    {
+        question: "What genre of music is Ziad Al Rahbanni best known for?",
+        options: ["Blues", "Cool Jazz", "Oriental Jazz", "Neo-Soul"],
+        correct: 2,
+        explanation: "Ziad Rahbani is best known for developing a distinctive musical style that blends traditional Arabic melodies with Western jazz harmony and improvisation."
+    },
+    {
+        question: "How is the Rahbani Brothers' musical style best described?",
+        options: ["Western classical", "Egyptian oriental", "American blues", "Rock and roll"],
+        correct: 0,
+        explanation: "Their style is mostly associated with a Western classical approach in their writing and arrangements."
+    }
+
+]; 
+
+let currentSlide = 'intro';
+let currentQIndex = -1;
+let scoreA = 0;
+let scoreB = 0;
+let activeTeam = 'A';
+let isStealTurn = false;
+let timerInterval = null;
+let timeLeft = 30;
+let isQuestionLocked = false;
+
+function showSlide(id) {
+    document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+    document.getElementById(`slide-${id}`).classList.add('active');
+    currentSlide = id;
+}
+
+function showNextPopup() {
+    const q = questions[currentQIndex];
+    const correctText = q.options[q.correct];
+    const isLastQuestion = currentQIndex === questions.length - 1;
+
+    document.getElementById('popup-correct-answer').innerHTML =
+        `Correct Answer: <span>${correctText}</span>`;
+
+    const explanationEl = document.getElementById('popup-explanation');
+    if (q.explanation) {
+        explanationEl.innerText = q.explanation;
+        explanationEl.style.display = 'block';
+    } else {
+        explanationEl.style.display = 'none';
+    }
+
+    const btn = document.getElementById('btn-next-popup');
+    if (isLastQuestion) {
+        btn.innerText = 'Finish';
+        btn.onclick = () => { hideNextPopup(); endGame(); };
+    } else {
+        btn.innerText = 'Next Question';
+        btn.onclick = loadNextQuestion;
+    }
+
+    document.getElementById('next-popup-overlay').classList.add('visible');
+}
+
+function hideNextPopup() {
+    document.getElementById('next-popup-overlay').classList.remove('visible');
+}
+
+function resetButtons() {
+    document.querySelectorAll('.option-btn').forEach(btn => {
+        btn.className = 'option-btn';
+    });
+}
+
+function clearFeedback() {
+    document.getElementById('feedback-message').className = 'feedback-text';
+    document.getElementById('timeout-message').className = '';
+    document.getElementById('timeout-message').innerText = '';
+    resetButtons();
+}
+
+function loadNextQuestion() {
+    currentQIndex++;
+
+    if (currentQIndex >= questions.length) {
+        endGame();
+        return;
+    }
+
+    document.getElementById('stage-frame').classList.add('game-active');
+
+    activeTeam = (currentQIndex % 2 === 0) ? 'A' : 'B';
+    updateActiveTeamUI();
+    isStealTurn = false;
+    isQuestionLocked = false;
+
+    hideNextPopup();
+    setupQuestionUI();
+    showSlide('question');
+    startTimer();
+}
+
+function setupQuestionUI() {
+    const q = questions[currentQIndex];
+
+    document.getElementById('q-text').innerText = q.question;
+
+    const grid = document.getElementById('q-options');
+    grid.innerHTML = '';
+
+    const labels = ['A','B','C','D'];
+
+    q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = `<span class="option-label">${labels[i]}</span> ${opt}`;
+        btn.onclick = () => handleAnswer(i, btn);
+        grid.appendChild(btn);
+    });
+
+    clearFeedback();
+    updateTurnIndicator();
+}
+
+function handleAnswer(index, btn) {
+    if (isQuestionLocked) return;
+
+    const q = questions[currentQIndex];
+    const isCorrect = index === q.correct;
+
+    clearInterval(timerInterval);
+    isQuestionLocked = true;
+
+    resetButtons();
+
+    if (isCorrect) {
+        btn.classList.add('correct');
+        updateScore(activeTeam, isStealTurn ? 1 : 2);
+
+        showEffect("correct");
+        btn.classList.add("correct-pop");
+        showFeedback("Correct", "text-correct");
+
+        setTimeout(() => {
+            clearFeedback();
+            btn.classList.remove("correct-pop");
+            setTimeout(() => showNextPopup(), 500);
+        }, 1200);
+
+        return;
+    }
+
+    btn.classList.add('wrong');
+    showEffect("wrong");
+    showFeedback("Wrong", "text-wrong");
+
+    setTimeout(() => {
+        clearFeedback();
+
+        if (!isStealTurn) {
+            initiateSteal();
+        } else {
+            isQuestionLocked = true;
+            setTimeout(() => showNextPopup(), 500);
+        }
+    }, 1200);
+}
+
+function initiateSteal() {
+    isStealTurn = true;
+    activeTeam = (activeTeam === 'A') ? 'B' : 'A';
+
+    isQuestionLocked = false;
+    updateTurnIndicator();
+    startTimer();
+    updateActiveTeamUI();
+}
+
+function showFeedback(text, typeClass) {
+    const f = document.getElementById('feedback-message');
+    f.innerText = text;
+    f.className = `feedback-text show ${typeClass}`;
+}
+
+function updateScore(team, points) {
+    if (team === 'A') scoreA += points;
+    else scoreB += points;
+
+    const el = document.getElementById(`score-${team}`);
+    el.innerText = team === 'A' ? scoreA : scoreB;
+
+    el.classList.add('score-pulse');
+    setTimeout(() => el.classList.remove('score-pulse'), 400);
+}
+
+function updateTurnIndicator() {
+    const ind = document.getElementById('turn-indicator');
+    ind.innerText = isStealTurn
+        ? `TEAM ${activeTeam} TO STEAL!`
+        : `TEAM ${activeTeam}'S TURN`;
+    updateActiveTeamUI();
+}
+
+function startTimer() {
+    if (currentSlide === "results") return;
+
+    clearInterval(timerInterval);
+
+    timeLeft = 30;
+    const t = document.getElementById('timer');
+    t.innerText = timeLeft;
+
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        t.innerText = timeLeft;
+
+        if (timeLeft <= 0) handleTimeout();
+    }, 1000);
+}
+
+function showEffect(type) {
+    const overlay = document.getElementById("wrong-overlay");
+    const stage = document.getElementById("stage-frame");
+
+    overlay.className = "";
+    stage.classList.remove("shake");
+
+    void overlay.offsetWidth;
+
+    overlay.classList.add("show", type);
+
+    if (type === "wrong" || type === "timeout") {
+        stage.classList.add("shake");
+    }
+
+    setTimeout(() => {
+        overlay.classList.remove("show", type);
+        stage.classList.remove("shake");
+    }, 1200);
+}
+
+function showTimeoutAnimation() {
+    const el = document.getElementById('timeout-message');
+
+    el.innerText = "TIME OUT";
+    el.classList.remove("show");
+
+    void el.offsetWidth;
+    el.classList.add("show");
+
+    setTimeout(() => {
+        el.classList.remove("show");
+        el.innerText = "";
+    }, 2000);
+}
+
+function handleTimeout() {
+    if (isQuestionLocked) return;
+
+    clearInterval(timerInterval);
+    isQuestionLocked = true;
+
+    resetButtons();
+
+    showEffect("timeout");
+    showTimeoutAnimation();
+
+    setTimeout(() => {
+        clearFeedback();
+
+        if (!isStealTurn) {
+            initiateSteal();
+        } else {
+            isQuestionLocked = true;
+            setTimeout(() => showNextPopup(), 500);
+        }
+    }, 1200);
+}
+
+function endGame() {
+    clearInterval(timerInterval);
+    hideNextPopup();
+
+    isQuestionLocked = true;
+
+    document.getElementById('timer').innerText = "--";
+    document.getElementById("team-a-container").classList.remove("active");
+    document.getElementById("team-b-container").classList.remove("active");
+    document.getElementById("turn-indicator").innerText = "";
+
+    let result =
+        scoreA > scoreB ? "Team A Wins!" :
+        scoreB > scoreA ? "Team B Wins!" :
+        "It's a Tie!";
+
+    document.getElementById('final-winner').innerText = result;
+
+    showSlide('results');
+}
+
+document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+
+    if (k === 'n') {
+        if (currentSlide === 'intro') loadNextQuestion();
+        else if (currentSlide === 'question' && document.getElementById('next-popup-overlay').classList.contains('visible')) loadNextQuestion();
+    }
+
+    if (currentSlide === 'question' && !isQuestionLocked) {
+        const b = document.querySelectorAll('.option-btn');
+
+        if (k === 'a') handleAnswer(0, b[0]);
+        if (k === 'b') handleAnswer(1, b[1]);
+        if (k === 'c') handleAnswer(2, b[2]);
+        if (k === 'd') handleAnswer(3, b[3]);
+    }
+});
+
+function updateActiveTeamUI() {
+    const teamA = document.getElementById("team-a-container");
+    const teamB = document.getElementById("team-b-container");
+
+    teamA.classList.remove("active");
+    teamB.classList.remove("active");
+
+    if (activeTeam === "A") {
+        teamA.classList.add("active");
+    } else {
+        teamB.classList.add("active");
+    }
+}
+</script>
+</body>
+</html>
