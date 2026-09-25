@@ -53,4 +53,4 @@ If you want to run this project on your local machine:
 ---
 
 ## Academic / Project Context
-This project was developed as part of my coursework journey at **USEK (Université Saint-Esprit de Kaslik)** to demonstrate proficiency in core front-end web development principles, interactive UI state management, and creative storytelling through code.
+This project was developed with my colleagues as part of my coursework journey at **USEK (Université Saint-Esprit de Kaslik)** to demonstrate proficiency in core front-end web development principles, interactive UI state management, and creative storytelling through code.
